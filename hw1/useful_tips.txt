@@ -1,0 +1,6 @@
+https://boscoj2008.github.io/customCNN/
+
+
+useful for visualizations of filters
+https://medium.com/ml2vec/intro-to-pytorch-with-image-classification-on-a-fashion-clothes-dataset-e589682df0c5
+
