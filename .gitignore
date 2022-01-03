@@ -3,6 +3,10 @@ nn_deep_learning_2021.zip
 dl_env/*
 hw1/classifier_data/*
 hw1/training/*
+hw1/regression_dataset/*
+hw1/images/*
+hw1/train_data.csv
+hw1/val_data.csv
 hw2/data/*
 hw3/data/*
 lab3/classifier_test_data.csv
