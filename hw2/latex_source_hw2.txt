@@ -1,0 +1,158 @@
+\documentclass[a4paper,11pt]{article}
+\renewcommand{\baselinestretch}{1.5}
+\usepackage[utf8]{inputenc}
+\usepackage{graphicx,physics,subcaption,siunitx,multirow,multicol,hyperref,geometry,amsmath,tikz,circuitikz,gensymb,bigfoot,filecontents}
+\usepackage[T1]{fontenc}
+\usepackage[numbered,framed]{matlab-prettifier}
+\usepackage{xurl}
+\let\ph\mlplaceholder % shorter macro
+\lstMakeShortInline"
+\lstset{
+  style              = Matlab-editor,
+  basicstyle         = \mlttfamily,
+  escapechar         = ",
+  mlshowsectionrules = true,
+}
+
+\interfootnotelinepenalty=10000
+
+\title{
+	\Large Neural Networks and Deep Learning 2021\\ 
+	
+	\Large Homework 1: Supervised Deep Learning \\
+	\small -- DRAFT VERSION --
+}
+\author{Matteo Grandin}
+\date{July 2021}
+
+\begin{document}
+\maketitle
+
+
+
+
+\section{Introduction}
+%Explain hw goals and the main implementation strategies
+The goal of this homework is to implement and test a convolutional autoencoder, testing different hyperparamters using grid or random search. It is also required to fine tune the unsupervised models using a supervised classification task. The latent space should be explored and used to generate new samples.
+
+Hyperparamters were tuned using a manually implemented grid search, in a similar way to the previous homework. Dropout and weight decay were considered for regularization. For the supervised tuning different strategies were considered. The first approach was to use a 10-dimensional latent space and force it to represent the class output, this strategy had the advantage of making generating new samples from a specific class very easy, but had the main downside of calculating a softmax in the middle of the network thus making training very hard, moreover the encoder and decoder are basically retrained and the encoder becomes a simple classifier. The second approach was to use a single fully connected layer, a matcher, from the latent space to the classification output, this approach solves all the previous downsides but makes picking new samples difficult in higher dimensions. For this reason it was first implemented using a 2-dimensional latent space where samples can plotted on a plane. Finally, this approach was extended to higher dimensional latent spaces, the problem of generating samples from a specific class was solved by calculating the mean and std of the encoded samples for each class. The report will focus on this last approach. The latent space was visualized both using PCA and tSNE. 
+
+For the second part a simple GAN and a Auxiliary-Classifier GAN have been implemnted and tested on the MNIST datasets.  
+The code is organized in notebooks; the training, grid search and cross validation are coded manually in order to have more control over the software and have a deeper understanding of what the code is doing. Almost all the code testing is done on a local machine using a dedicated graphic card (NVIDIA GeForce GTX 950M). 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Methods}
+%Describe model architecture and hyperparameters
+\subsection{Convolutional Autoencoder}
+Both the encoder and the decoder are subdivided in layers. The encoder is composed of 3 convolutional layers with Relu activations, followed by 2 fully connected layers with dropout and Relu activations. No activation function was used for the final layer. The decoder is specular with respect to the encoder: 2 fully connected layers with dropout followed by 3 transposed convolution to recreate the output image.
+
+A simple grid search has been manually implemented to compare the hyperparameters combinations, and k-fold cross validation has been used to validate the models. The implementation is very similar to the one of the first homework: also in this case the network weights are not reset at each fold to speed up training and test more combinations. The list of parameters selected for the grid search is the following:
+\begin{itemize}
+    \item Encoded space dimension: 10 and 30, smaller sizes were also considered but were discarded to reduce the number of combinations
+    \item Optimizers: Adam, SGD with momentum and RMSprop were also tested but both performed very similar or slightly worse to Adam.
+    \item Learning rates: \num{5e-3}, \num{1e-3}, \num{5e-4}
+    \item Weight decay: \num{1e-5}, \num{1e-6}, \num{0}
+\end{itemize}
+
+Dropout with probability \num{0.5} was used to introduce regularization. 
+Different losses were also tested: Huber loss performed similarly to MSE loss, L1 achieved good results but with a different, style of reconstruction. Samples from this losses are shown in the Appendix, from now on only MSE will be considered.
+
+In order to use classification to perform finetuning, focus needs to be shifted onto a single combination of parameters: an encoded space dimension of 10, Adam optimzier with \num{1e-3} as learning rate and no weight decay. The model is initially trained for 150 epochs to achieve good reconstruction capabilities; then, the single layer matcher net is trained for a few epochs (10, using Cross-Entropy loss on the one-hot encoding of the labels), without updating encoder and decoder, in order to initialize to good values the single layer weights. The final step is to train everything together, encoder, decoder and single layer matcher. To do this 2 losses are backpropagated into the networks(this is possible since gradients are accumulated and not overwritten): the reconstruction loss (MSE, L1, Huber) and the classification loss (Cross-Entropy). In this way the encoder is optimized for both tasks. 
+
+As already mentioned in the introduction, in order to generate new samples, the best samples for each class were selected, based on the confidence of the classifications. The encoded representation of each sample were then averaged to get a prototypical encoding for each class, from it any number of samples can be generated adding Gaussian noise. 
+
+\subsection{GAN and AC-GAN}
+A Generative Adversarial Network is a deep learning architecture composed of two models: a generator, that takes as input noise (and class information in the case of an Auxiliary classifier GAN) and generates as output an image in this case; and a discriminator, that takes as input an image and outputs a 1 if the image is from the original dataset and a 0 if it's generated by the generator network (an AC-GAN also outputs class information). The generator is a fully connected 3 hidden layers network, it LeakyRelu in the internal layers and Tanh in the output layer to output a valid pixel value. The discriminator network is also a 3 hidden layers fully connected architecture with Dropout and LeakyRelu as activation function. LeakyRelu is very important because the gradients need to propagate from the top of the discriminator all the way to the first layers of the generator, this particular activation function helps in preventing the gradient vanishing problem. 
+
+In order to train the network generator and discriminator needs to be trained one after the other: the discriminator is trained by evaluating a real batch of images and a fake batch of images, with the same classification labels and with their respective real/true labels, both the classification loss and the discrimination loss are propagated backward. The generator is trained by generating a batch of images and using the loss of the discriminator evaluated against a batch of real labels, this implementation is not the original version described by J. Goodfellow, but is extremely effective in practice. 
+
+Training is very long and very difficult, learning rate needs to be slow and the losses of the 2 adversarial networks need to follow a very specific pattern in order for the train to work. Several tricks and several hours were needed in order to get satisfactory results. 
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Results and Network Analysis}
+\subsection{Convolutional Autoencoder}
+
+
+\begin{figure} [h]
+    \centering
+    \includegraphics[width = 0.8\linewidth]{final_regression_model_output.eps}
+    \caption{Final regression model output}
+    \label{reg_net_out}
+\end{figure}
+
+The weights histogram for the 3 network layers are shown in figure \ref{fig:reg_hist_act_prof}. Even with a small network it's hard to interpret how the weights influence the output.
+
+\begin{figure}[h]
+     \centering
+     \begin{subfigure}[b]{0.9\textwidth}
+         \centering
+         \includegraphics[width=\textwidth]{final_regression_model_weight_histograms.eps}
+     \end{subfigure}
+     \hfill
+     \begin{subfigure}[b]{0.9\textwidth}
+         \centering
+         \includegraphics[width=\textwidth]{final_regression_model_activations.eps}
+     \end{subfigure}
+        \caption{Final regression model convolutional kernels and convolutional layer activations}
+        \label{fig:reg_hist_act_prof}
+\end{figure}
+
+\subsection{AC-GAN}
+The final model is trained using Adam as optimizer with a learning rate of \num{3e-3}. The model trained for \num{74} epochs before early stopping. It achieves a \num{90.22} \% accuracy on the test set. The confusion matrices for both the train and test dataset are shown in the Appendix. The convolutional kernels and the convolutional layers activations are shown in figure \ref{fig:conv_activations}; once again it's very difficult to interpret the features encoded. The weights histogram and the linear section activations are in the Appendix.
+
+\begin{figure}[h]
+     \centering
+     \begin{subfigure}[b]{0.7\textwidth}
+         \centering
+         \includegraphics[width=\textwidth]{cnn_conv1_kernels.png}
+     \end{subfigure}
+     \hfill
+     \begin{subfigure}[b]{0.7\textwidth}
+         \centering
+         \includegraphics[width=\textwidth]{cnn_conv2_kernels.png}
+     \end{subfigure}
+     \hfill
+     \begin{subfigure}[b]{0.7\textwidth}
+         \centering
+         \includegraphics[width=\textwidth]{cnn_layer0_activation.png}
+     \end{subfigure}
+     \hfill
+     \begin{subfigure}[b]{0.7\textwidth}
+         \centering
+         \includegraphics[width=\textwidth]{cnn_layer1_activation.png}
+     \end{subfigure}
+        \caption{Final classification model weights histogram and last layer activations}
+        \label{fig:conv_activations}
+\end{figure}
+
+
+\clearpage
+
+\section{Appendix}
+%confusion matrices
+\subsection{Classification}
+\subsubsection{Confusion Matrices}
+Apparently, shirts can be confused more easily with t-shirts, coats and pullover. To be fair I looked at some examples of coats and pullover and they are extremely hard to distinguish even as a human.
+\begin{figure}[h!]
+     \centering
+     \begin{subfigure}[b]{0.5\textwidth}
+         \centering
+         \includegraphics[width=\textwidth]{cnn_confusion_matrix_train.png}
+     \end{subfigure}
+     \hfill
+     \begin{subfigure}[b]{0.5\textwidth}
+         \centering
+         \includegraphics[width=\textwidth]{cnn_confusion_matrix_test.png}
+     \end{subfigure}
+        \caption{Confusion matrices on training and test dataset.}
+        \label{fig:confusion_matrices}
+\end{figure}
+
+%cnn linear layer activations
+%classification combinations
+%regression combinations
+
+
+\end{document}
+

@@ -1,0 +1,162 @@
+\documentclass[a4paper,11pt]{article}
+\renewcommand{\baselinestretch}{1.5}
+\usepackage[utf8]{inputenc}
+\usepackage{graphicx,physics,subcaption,siunitx,multirow,multicol,hyperref,geometry,amsmath,tikz,circuitikz,gensymb,bigfoot,filecontents}
+\usepackage[T1]{fontenc}
+\usepackage[numbered,framed]{matlab-prettifier}
+\usepackage{xurl}
+\let\ph\mlplaceholder % shorter macro
+\lstMakeShortInline"
+\lstset{
+  style              = Matlab-editor,
+  basicstyle         = \mlttfamily,
+  escapechar         = ",
+  mlshowsectionrules = true,
+}
+
+\interfootnotelinepenalty=10000
+
+\title{
+	\Large Neural Networks and Deep Learning 2021\\ 
+	
+	\Large Homework 1: Supervised Deep Learning \\
+	\small -- DRAFT VERSION --
+}
+\author{Matteo Grandin}
+\date{July 2021}
+
+\begin{document}
+\maketitle
+
+
+
+
+\section{Introduction}
+%Explain hw goals and the main implementation strategies
+The homework is divided in two main tasks. The \textit{regression task} consists in a simple function approximation problem for which a training dataset and a test dataset are given. The \textit{classification task} consists in a image recognition problem, where the goal is to correctly classifies the image from the FashionMNIST dataset. The regression task is addressed using a simple fully connected network, while a convolutional architecture is used for the classification task.
+Hyperparameters tuning is implemented using grid-search. The combinations are evaluated using cross-validation on the training datasets, analyzing validation losses and outputs. After tuning, the focus is shifted over a single combination, the nets are tested on the test datasets and performance is evaluated. Finally, networks are analyzed showing weights histogram and activation profiles, in the case of the convolutional network, the receptive fields of the convolutional filters are shown.
+
+The code is organized in notebooks, one for each tasks; the training, grid search and cross validation is coded manually in order to have more control over the software and have a deeper understanding of what the code is doing. Almost all the code testing is done on a local machine using a dedicated graphic card (NVIDIA GeForce GTX 950M). 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Methods}
+%Describe model architecture and hyperparameters
+\subsection{Regression Task}
+\subsubsection{Network Architecture}
+For the regression task a simple, 2 hidden layers, fully connected neural network has been implemented. The size of the hidden layers, as well as the type of activation function of the internal layers (the output layer does not need an activation function, we don't want to limit the output) and the dropout probability can all be chosen when initializing the network. These parameters will be some of the ones used in the grid-search. 
+\subsubsection{Hyperparamters Tuning}
+A simple grid search has been manually implemented to compare the hyperparameters' combinations of the architecture.
+To achieve an effective tuning a lot of values for each parameter should be considered, but due to training time constraints, it quickly becomes very time consuming to explore a lot of combinations. The grid-search code has been written to deal with any amount of values, but a limited amount of combinations has been considered and some combinations has been discarded. With more time the hyperparameters' space could be explored better.
+A list of the parameters for which different values has been evaluated is shown here:
+\begin{itemize}
+    \item Activation functions: Tanh and Sigmoid; Relu was discarded because the given samples are better approximated by smooth functions, Relu generates outputs with sharp corners.
+    \item Loss functions: L1 and L2 losses, Huber loss was also tested and achieved results similar to the MSE loss, therefore it was removed from the combinations.
+    \item Size of the hidden layers: 16 and 32, a smaller network is a way to perform regularization; since we are dealing with a small problem and a simple function, a big and deep neural net would be overkill for the task.
+    \item Optimizers: Adam and SGD with momentum, simple SGD was also considered at first but it performs very poorly versus the alternatives.
+    \item Learning rates: a small range of l.r. from \num{1e-2} to \num{8e-4}
+\end{itemize}
+
+Dropout was also considered as an hyperparameter and regularization method but the results has been unsatisfactory, the main reason why is that we are dealing with a regression task and the activation of a single neuron can be extremely important for predicting the output. Dropout makes a lot more sense in a classification task where there are multiple ways to decide the class of an image, this case will be explored in the following sections.
+
+To evaluate the models a classic k-fold cross validation setup has been coded; each model has been trained with a batch size of 8 and for 1000 epochs. Early stopping has been used for the final model training in order to avoid overfitting.
+
+\subsection{Classification Task}
+\subsubsection{Network Architecture}
+For the classification task a convolutional neural network (CNN) with 2 convolutionals layers followed by 2 fully connected layers has been implemented. In the convolutional part the activation function is Relu followed by a pooling layer. Each linear layer also uses Relu as activation function and it's followed by a dropout layer for regularization. In order to improve the classification capabilities, the integer label corresponding to the class in the FashionMNIST dataset is always converted in a vector of zeros with only the element associated with the label set to 1 (one-hot encoding); it's therefore possible to use the cross-entropy loss and it's much easier to evaluate the accuracy of the model.
+\subsubsection{Hyperparamters Tuning}
+Hyperparameters tuning has been implemented in a very similar way to the regression task. The main difference is that in this case, the network weights are not reset each fold of the k-fold cross validation, and the model is not retrained on the whole training dataset at end. Instead, the model is continuously trained through the folds and the effective number of epochs gets multiplied by the number of folds. This has the disadvantage of having a less accurate validation loss, but drastically reduces the training time of each parameter combination and allows for more combinations to be tested. As before, the parameters space is small but the code allows for more exploration with more time.
+The list of hyperparameters is the following:
+\begin{itemize}
+    \item Optimizers: Adam and SGD with momentum
+    \item Learning rates: a small range from \num{5e-4} to \num{5e-2}
+    \item Batch sizes: 256 and 1024
+\end{itemize}
+Each model has been trained for a total of $20\times4$ epochs ($epochs\_per\_fold \times folds$).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Results and Network Analysis}
+\subsection{Regression}
+The losses and the network output for every combination can be found in the appendix. The parameter for the final training are: $Tanh$ (activation function), 16 (size of the hidden layers), 8 (batch size), Adam optimizer with \num{2e-3} as learning rate. The network achieves a test loss of \num{0.123} on the test set, from Figure \ref{reg_net_out} we can see that the test set is very well approximated except in the section where training data points are missing.
+
+\begin{figure} [h]
+    \centering
+    \includegraphics[width = 0.8\linewidth]{final_regression_model_output.eps}
+    \caption{Final regression model output}
+    \label{reg_net_out}
+\end{figure}
+
+The weights histogram for the 3 network layers are shown in figure \ref{fig:reg_hist_act_prof}. Even with a small network it's hard to interpret how the weights influence the output.
+
+\begin{figure}[h]
+     \centering
+     \begin{subfigure}[b]{0.9\textwidth}
+         \centering
+         \includegraphics[width=\textwidth]{final_regression_model_weight_histograms.eps}
+     \end{subfigure}
+     \hfill
+     \begin{subfigure}[b]{0.9\textwidth}
+         \centering
+         \includegraphics[width=\textwidth]{final_regression_model_activations.eps}
+     \end{subfigure}
+        \caption{Final regression model convolutional kernels and convolutional layer activations}
+        \label{fig:reg_hist_act_prof}
+\end{figure}
+
+\subsection{Classification}
+The final model is trained using Adam as optimizer with a learning rate of \num{3e-3}. The model trained for \num{74} epochs before early stopping. It achieves a \num{90.22} \% accuracy on the test set. The confusion matrices for both the train and test dataset are shown in the Appendix. The convolutional kernels and the convolutional layers activations are shown in figure \ref{fig:conv_activations}; once again it's very difficult to interpret the features encoded. The weights histogram and the linear section activations are in the Appendix.
+
+\begin{figure}[h]
+     \centering
+     \begin{subfigure}[b]{0.7\textwidth}
+         \centering
+         \includegraphics[width=\textwidth]{cnn_conv1_kernels.png}
+     \end{subfigure}
+     \hfill
+     \begin{subfigure}[b]{0.7\textwidth}
+         \centering
+         \includegraphics[width=\textwidth]{cnn_conv2_kernels.png}
+     \end{subfigure}
+     \hfill
+     \begin{subfigure}[b]{0.7\textwidth}
+         \centering
+         \includegraphics[width=\textwidth]{cnn_layer0_activation.png}
+     \end{subfigure}
+     \hfill
+     \begin{subfigure}[b]{0.7\textwidth}
+         \centering
+         \includegraphics[width=\textwidth]{cnn_layer1_activation.png}
+     \end{subfigure}
+        \caption{Final classification model weights histogram and last layer activations}
+        \label{fig:conv_activations}
+\end{figure}
+
+
+\clearpage
+
+\section{Appendix}
+%confusion matrices
+\subsection{Classification}
+\subsubsection{Confusion Matrices}
+Apparently, shirts can be confused more easily with t-shirts, coats and pullover. To be fair I looked at some examples of coats and pullover and they are extremely hard to distinguish even as a human.
+\begin{figure}[h!]
+     \centering
+     \begin{subfigure}[b]{0.5\textwidth}
+         \centering
+         \includegraphics[width=\textwidth]{cnn_confusion_matrix_train.png}
+     \end{subfigure}
+     \hfill
+     \begin{subfigure}[b]{0.5\textwidth}
+         \centering
+         \includegraphics[width=\textwidth]{cnn_confusion_matrix_test.png}
+     \end{subfigure}
+        \caption{Confusion matrices on training and test dataset.}
+        \label{fig:confusion_matrices}
+\end{figure}
+
+%cnn linear layer activations
+%classification combinations
+%regression combinations
+
+
+\end{document}
+

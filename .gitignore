@@ -10,6 +10,14 @@ hw1/val_data.csv
 hw1/test_data.csv
 hw2/data/*
 hw3/data/*
+hw2/images_huber/*
+hw2/images_L1/*
+hw2/good_models_huber/*
+hw2/good_models_L1/*
+hw2/good_models/*
+hw2/images/*
+hw3/training/*
+/home/irong/nn_deep_learning_2021/hw2/good_models/*
 lab3/classifier_test_data.csv
 lab3/classifier_train_data.csv
 lab3/classifier_val_data.csv
