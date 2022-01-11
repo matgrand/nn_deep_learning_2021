@@ -49,7 +49,7 @@ Both the encoder and the decoder are subdivided in layers. The encoder is compos
 A simple grid search has been manually implemented to compare the hyperparameters combinations, and k-fold cross validation has been used to validate the models. The implementation is very similar to the one of the first homework: also in this case the network weights are not reset at each fold to speed up training and test more combinations. The list of parameters selected for the grid search is the following:
 \begin{itemize}
     \item Encoded space dimension: 10 and 30, smaller sizes were also considered but were discarded to reduce the number of combinations
-    \item Optimizers: Adam, SGD with momentum and RMSprop were also tested but both performed very similar or slightly worse to Adam.
+    \item Optimizers: Adam, SGD with momentum and RMSprop were also tested but both performed very similar or slightly worse than Adam.
     \item Learning rates: \num{5e-3}, \num{1e-3}, \num{5e-4}
     \item Weight decay: \num{1e-5}, \num{1e-6}, \num{0}
 \end{itemize}
@@ -66,92 +66,267 @@ A Generative Adversarial Network is a deep learning architecture composed of two
 
 In order to train the network generator and discriminator needs to be trained one after the other: the discriminator is trained by evaluating a real batch of images and a fake batch of images, with the same classification labels and with their respective real/true labels, both the classification loss and the discrimination loss are propagated backward. The generator is trained by generating a batch of images and using the loss of the discriminator evaluated against a batch of real labels, this implementation is not the original version described by J. Goodfellow, but is extremely effective in practice. 
 
-Training is very long and very difficult, learning rate needs to be slow and the losses of the 2 adversarial networks need to follow a very specific pattern in order for the train to work. Several tricks and several hours were needed in order to get satisfactory results. 
+Training requires a lot of epochs and it's extremely sensitive to , learning rate needs to be slow and the losses of the 2 adversarial networks need to follow a very specific pattern in order for the train to work. Several tricks and several hours were needed in order to get satisfactory results. 
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Results and Network Analysis}
 \subsection{Convolutional Autoencoder}
+The final model was trained for 150 epochs, the encoded space is 10-dimensional. It achieves a loss of \num{0.03086} on the train set and of \num{0.03095} on the test set. After training the single layer matcher, but without finetuning, the model is not a very accurate classifier achieving XXXX accuracy on the train set and XXXX on the test set. Example of reconstructions before and after the supervised tuning can be found in the Appendix, it's hard to notice any change in recostruction capabilities. The classification accuracy on the other hand drastically improves to 91\% on the training dataset and 87\% on the test data, meaning that there is a slight overfit on the train points. The accuracy is similar but slightly worse with respect to the convolutional network of homework 1 (90\%); the learning speeds are also very similar but it's difficult to derive conclusions since the learning speed is very dependent on hyperparameters like the learning rate.
 
+The encoded space has been analyzed both using PCA and tSNE. PCA is not very insightful because, although some classes are visible and clearly separated, a lot of the complexity is lost in the projection. tSNE is more useful because it shows how some classes are very well separated and others are close together and sometimese partially mixed; this is what we expect since some classes were hard to distinguish also from the convolutional classifier the first  (it's difficult for humans too). 
+
+The new samples generated are mostly correct, however there is little variation between the samples despite the fact that it's very easy to end up in a different class adding some noise. This is probably a consequence of the type of loss, which is not very well suited for capturing details and small variations.  
 
 \begin{figure} [h]
     \centering
-    \includegraphics[width = 0.8\linewidth]{final_regression_model_output.eps}
-    \caption{Final regression model output}
+    \includegraphics[width = 0.8\linewidth]{losses_encoder10_finetuned_150.eps} %losses
+    \caption{Classification and reconstruction losses}
     \label{reg_net_out}
 \end{figure}
 
-The weights histogram for the 3 network layers are shown in figure \ref{fig:reg_hist_act_prof}. Even with a small network it's hard to interpret how the weights influence the output.
-
-\begin{figure}[h]
-     \centering
-     \begin{subfigure}[b]{0.9\textwidth}
-         \centering
-         \includegraphics[width=\textwidth]{final_regression_model_weight_histograms.eps}
-     \end{subfigure}
-     \hfill
-     \begin{subfigure}[b]{0.9\textwidth}
-         \centering
-         \includegraphics[width=\textwidth]{final_regression_model_activations.eps}
-     \end{subfigure}
-        \caption{Final regression model convolutional kernels and convolutional layer activations}
-        \label{fig:reg_hist_act_prof}
-\end{figure}
-
 \subsection{AC-GAN}
-The final model is trained using Adam as optimizer with a learning rate of \num{3e-3}. The model trained for \num{74} epochs before early stopping. It achieves a \num{90.22} \% accuracy on the test set. The confusion matrices for both the train and test dataset are shown in the Appendix. The convolutional kernels and the convolutional layers activations are shown in figure \ref{fig:conv_activations}; once again it's very difficult to interpret the features encoded. The weights histogram and the linear section activations are in the Appendix.
+The AC-GAN achieves very good results: the generated digits images are almost indistinguishable from real ones (shown in the Appendix), and it's possible to generate correct samples for every digit with a good inter-class variation. The classification part of the GAN greatly helps in reducing the problem of mode collapse. The images can sometimes present some artifacts, and the shapes can be discontinuous; this issues could have probably been solved using a convolutional architecture, however, given the difficulties and the time required for training it has not been tested.
 
-\begin{figure}[h]
-     \centering
-     \begin{subfigure}[b]{0.7\textwidth}
-         \centering
-         \includegraphics[width=\textwidth]{cnn_conv1_kernels.png}
-     \end{subfigure}
-     \hfill
-     \begin{subfigure}[b]{0.7\textwidth}
-         \centering
-         \includegraphics[width=\textwidth]{cnn_conv2_kernels.png}
-     \end{subfigure}
-     \hfill
-     \begin{subfigure}[b]{0.7\textwidth}
-         \centering
-         \includegraphics[width=\textwidth]{cnn_layer0_activation.png}
-     \end{subfigure}
-     \hfill
-     \begin{subfigure}[b]{0.7\textwidth}
-         \centering
-         \includegraphics[width=\textwidth]{cnn_layer1_activation.png}
-     \end{subfigure}
-        \caption{Final classification model weights histogram and last layer activations}
-        \label{fig:conv_activations}
+From the plot of the losses (Figure \ref{fig:loss_GAN}) it's possible to see the pattern required for an healthy training, where the generator loss peaks at the beginning while the discriminator is at its minimum, and then slowly improves while the discriminator weakens. After a fixed amount of episodes the discriminator is progressively trained more than the generator to achieve better results, the 3 little spikes in the loss correspond to the moments the discriminator starts getting trained more. 
+
+\begin{figure} [h]
+    \centering
+    \includegraphics[width = 0.8\linewidth]{losses.png} %losses
+    \caption{Generator and discriminator losses}
+    \label{fig:loss_GAN}
 \end{figure}
 
 
 \clearpage
 
 \section{Appendix}
-%confusion matrices
-\subsection{Classification}
-\subsubsection{Confusion Matrices}
-Apparently, shirts can be confused more easily with t-shirts, coats and pullover. To be fair I looked at some examples of coats and pullover and they are extremely hard to distinguish even as a human.
-\begin{figure}[h!]
+\subsection{Convolutional Autoencoder}
+% IMAGE RECONSTRUCITON BEFORE TUNING
+\begin{figure} [h!]
      \centering
-     \begin{subfigure}[b]{0.5\textwidth}
+     \begin{subfigure}[b]{0.3\textwidth}
          \centering
-         \includegraphics[width=\textwidth]{cnn_confusion_matrix_train.png}
+         \includegraphics[width=\textwidth]{10D_reconstruction_example_19.png}
      \end{subfigure}
      \hfill
-     \begin{subfigure}[b]{0.5\textwidth}
+     \begin{subfigure}[b]{0.3\textwidth}
          \centering
-         \includegraphics[width=\textwidth]{cnn_confusion_matrix_test.png}
+         \includegraphics[width=\textwidth]{10D_reconstruction_example_20.png}
      \end{subfigure}
-        \caption{Confusion matrices on training and test dataset.}
-        \label{fig:confusion_matrices}
+     \hfill
+     \begin{subfigure}[b]{0.3\textwidth}
+         \centering
+         \includegraphics[width=\textwidth]{10D_reconstruction_example_21.png}
+     \end{subfigure}
+        \caption{Image reconstruction examples, MSE loss}
+        \label{fig:three graphs}
+\end{figure}
+% IMAGE RECONSTUCTION AFTER TUNING
+\begin{figure} [h!]
+     \centering
+     \begin{subfigure}[b]{0.3\textwidth}
+         \centering
+         \includegraphics[width=\textwidth]{10D_reconstruction_example_finetuned_19.png}
+     \end{subfigure}
+     \hfill
+     \begin{subfigure}[b]{0.3\textwidth}
+         \centering
+         \includegraphics[width=\textwidth]{10D_reconstruction_example_finetuned_20.png}
+     \end{subfigure}
+     \hfill
+     \begin{subfigure}[b]{0.3\textwidth}
+         \centering
+         \includegraphics[width=\textwidth]{10D_reconstruction_example_finetuned_21.png}
+     \end{subfigure}
+        \caption{Image reconstruction examples after finetuning, MSE loss}
+        \label{fig:three graphs}
 \end{figure}
 
-%cnn linear layer activations
-%classification combinations
-%regression combinations
+% L1 IMAGE RECONSTRUCTION 
+\begin{figure} [h!]
+     \centering
+     \begin{subfigure}[b]{0.3\textwidth}
+         \centering
+         \includegraphics[width=\textwidth]{L1/10D_reconstruction_example_19.png}
+     \end{subfigure}
+     \hfill
+     \begin{subfigure}[b]{0.3\textwidth}
+         \centering
+         \includegraphics[width=\textwidth]{L1/10D_reconstruction_example_20.png}
+     \end{subfigure}
+     \hfill
+     \begin{subfigure}[b]{0.3\textwidth}
+         \centering
+         \includegraphics[width=\textwidth]{L1/10D_reconstruction_example_21.png}
+     \end{subfigure}
+        \caption{Image reconstruction examples, L1 loss}
+        \label{fig:three graphs}
+\end{figure}
+% L1 IMAGE RECONSTRUCTION after finetuning
+\begin{figure} [h!]
+     \centering
+     \begin{subfigure}[b]{0.3\textwidth}
+         \centering
+         \includegraphics[width=\textwidth]{L1/10D_reconstruction_example_finetuned_19.png}
+     \end{subfigure}
+     \hfill
+     \begin{subfigure}[b]{0.3\textwidth}
+         \centering
+         \includegraphics[width=\textwidth]{L1/10D_reconstruction_example_finetuned_20.png}
+     \end{subfigure}
+     \hfill
+     \begin{subfigure}[b]{0.3\textwidth}
+         \centering
+         \includegraphics[width=\textwidth]{L1/10D_reconstruction_example_finetuned_21.png}
+     \end{subfigure}
+        \caption{Image reconstruction examples after finetuning, L1 loss}
+        \label{fig:three graphs}
+\end{figure}
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width = 1.0\linewidth]{10D_finetuned_PCA.eps} %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    \caption{PCA} 
+    \label{fig:appendix}
+\end{figure}
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width = 1.0\linewidth]{10D_finetuned_TSNE.eps} %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    \caption{tSNE} 
+    \label{fig:appendix}
+\end{figure}
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width = 1.0\linewidth]{new_samples_generated_finetuned_10_150.png} %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    \caption{Generated samples for: t-shirt, trouser, pullover, dress, coat, sandal, shirt, sneaker, bag, boot } 
+    \label{fig:appendix}
+\end{figure}
+
+\clearpage
+\subsection{AC-GAN}
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width = 1\linewidth]{gan_real_vs_fake_images.png} %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    \caption{Real vs AC-GAN generated digits} 
+    \label{fig:appendix}
+\end{figure}
+
+\clearpage
+\subsection{Additional Images}
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width = 1\linewidth]{encoder10_outputs_not_tuned_150.png} %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    \caption{Encoder output activations before tuning (softmax)} 
+    \label{fig:appendix}
+\end{figure}
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width = 1\linewidth]{encoder10_outputs_finetuned_150.png} %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    \caption{Encoder output activations after tuning (softmax)} 
+    \label{fig:appendix}
+\end{figure}
+
+\begin{figure} [h!]
+     \centering
+     \begin{subfigure}[b]{0.45\textwidth}
+         \centering
+         \includegraphics[width=\textwidth]{grid_search/loss_1_Adam_lr_5e-03_wd_1e-05_esd_10_60.eps}
+     \end{subfigure}
+     \hfill
+     \begin{subfigure}[b]{0.45\textwidth}
+         \centering
+         \includegraphics[width=\textwidth]{grid_search/loss_2_Adam_lr_5e-03_wd_1e-05_esd_30_60.eps}
+     \end{subfigure}
+     \hfill
+     \begin{subfigure}[b]{0.45\textwidth}
+         \centering
+         \includegraphics[width=\textwidth]{grid_search/loss_3_Adam_lr_5e-03_wd_1e-06_esd_10_60.eps}
+     \end{subfigure}
+     \hfill
+     \begin{subfigure}[b]{0.45\textwidth}
+         \centering
+         \includegraphics[width=\textwidth]{grid_search/loss_4_Adam_lr_5e-03_wd_1e-06_esd_30_60.eps}
+     \end{subfigure}
+     \hfill
+     \begin{subfigure}[b]{0.45\textwidth}
+         \centering
+         \includegraphics[width=\textwidth]{grid_search/loss_5_Adam_lr_5e-03_wd_0e+00_esd_10_60.eps}
+     \end{subfigure}
+     \hfill
+     \begin{subfigure}[b]{0.45\textwidth}
+         \centering
+         \includegraphics[width=\textwidth]{grid_search/loss_6_Adam_lr_5e-03_wd_0e+00_esd_30_60.eps}
+     \end{subfigure}
+     \hfill
+     \begin{subfigure}[b]{0.45\textwidth}
+         \centering
+         \includegraphics[width=\textwidth]{grid_search/loss_7_Adam_lr_1e-03_wd_1e-05_esd_10_60.eps}
+     \end{subfigure}
+     \hfill
+     \begin{subfigure}[b]{0.45\textwidth}
+         \centering
+         \includegraphics[width=\textwidth]{grid_search/loss_8_Adam_lr_1e-03_wd_1e-05_esd_30_60.eps}
+     \end{subfigure}
+     \hfill
+     \begin{subfigure}[b]{0.45\textwidth}
+         \centering
+         \includegraphics[width=\textwidth]{grid_search/loss_9_Adam_lr_1e-03_wd_1e-06_esd_10_60.eps}
+     \end{subfigure}
+     \hfill
+     \begin{subfigure}[b]{0.45\textwidth}
+         \centering
+         \includegraphics[width=\textwidth]{grid_search/loss_10_Adam_lr_1e-03_wd_1e-06_esd_30_60.eps}
+     \end{subfigure}
+        \caption{Grid search results 1/2}
+        \label{fig:three graphs}
+\end{figure}
+
+\begin{figure} [h!]
+     \centering
+     \begin{subfigure}[b]{0.45\textwidth}
+         \centering
+         \includegraphics[width=\textwidth]{grid_search/loss_11_Adam_lr_1e-03_wd_0e+00_esd_10_60.eps}
+     \end{subfigure}
+     \hfill
+     \begin{subfigure}[b]{0.45\textwidth}
+         \centering
+         \includegraphics[width=\textwidth]{grid_search/loss_12_Adam_lr_1e-03_wd_0e+00_esd_30_60.eps}
+     \end{subfigure}
+     \hfill
+     \begin{subfigure}[b]{0.45\textwidth}
+         \centering
+         \includegraphics[width=\textwidth]{grid_search/loss_13_Adam_lr_5e-04_wd_1e-05_esd_10_60.eps}
+     \end{subfigure}
+          \hfill
+     \begin{subfigure}[b]{0.45\textwidth}
+         \centering
+         \includegraphics[width=\textwidth]{grid_search/loss_14_Adam_lr_5e-04_wd_1e-05_esd_30_60.eps}
+     \end{subfigure}
+     \hfill
+     \begin{subfigure}[b]{0.45\textwidth}
+         \centering
+         \includegraphics[width=\textwidth]{grid_search/loss_15_Adam_lr_5e-04_wd_1e-06_esd_10_60.eps}
+     \end{subfigure}
+     \hfill
+     \begin{subfigure}[b]{0.45\textwidth}
+         \centering
+         \includegraphics[width=\textwidth]{grid_search/loss_16_Adam_lr_5e-04_wd_1e-06_esd_30_60.eps}
+     \end{subfigure}
+     \hfill
+     \begin{subfigure}[b]{0.45\textwidth}
+         \centering
+         \includegraphics[width=\textwidth]{grid_search/loss_17_Adam_lr_5e-04_wd_0e+00_esd_10_60.eps}
+     \end{subfigure}
+     \hfill
+     \begin{subfigure}[b]{0.45\textwidth}
+         \centering
+         \includegraphics[width=\textwidth]{grid_search/loss_18_Adam_lr_5e-04_wd_0e+00_esd_30_60.eps}
+     \end{subfigure}
+        \caption{Grid search results 2/2}
+        \label{fig:three graphs}
+\end{figure}
 
 
 \end{document}
