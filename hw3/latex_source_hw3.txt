@@ -1,0 +1,104 @@
+\documentclass[a4paper,11pt]{article}
+\renewcommand{\baselinestretch}{1.5}
+\usepackage[utf8]{inputenc}
+\usepackage{graphicx,physics,subcaption,siunitx,multirow,multicol,hyperref,geometry,amsmath,tikz,circuitikz,gensymb,bigfoot,filecontents}
+\usepackage[T1]{fontenc}
+\usepackage[numbered,framed]{matlab-prettifier}
+\usepackage{xurl}
+\let\ph\mlplaceholder % shorter macro
+\lstMakeShortInline"
+\lstset{
+  style              = Matlab-editor,
+  basicstyle         = \mlttfamily,
+  escapechar         = ",
+  mlshowsectionrules = true,
+}
+
+\interfootnotelinepenalty=10000
+
+\title{
+	\Large Neural Networks and Deep Learning 2021\\ 
+	
+	\Large Homework 3: Deep Reinforcement Learning \\
+}
+\author{Matteo Grandin}
+\date{January 2022}
+
+\begin{document}
+\maketitle
+
+
+
+
+\section{Introduction}
+%Explain hw goals and the main implementation strategies
+The goal of this homework is to use deep reinforcement learning techniques, and more specifically Q-learning, to solve problems from the 'gym' environment framework. Three different problems will be tackled in this homework:
+\begin{itemize}
+    \item Solving the Cart-Pole-v1 environment using state dynamics variables: position, velocity, angle and angular velocity.
+    \item Solving the Cart-Pole-v1 environment, but using only the image pixels to control the agent.
+    \item Solving the MountainCar-v0 environment, using state dynamics variables: position and velocity.
+\end{itemize}
+
+\section{Cart-Pole-v1}
+The Cart-Pole-v1 environment consist in a cart free to move along a line, with a pole attached to it, which can freely rotate. The objective is to keep the pole balanced against gravity for more time steps as possible, in particular, as written in the documentation, the environment is considered solved  when the average return is greater than or equal to 195.0 over 100 consecutive trials, however this report will focus on performance in a more qualitative way, in order to understand the dependencies on the hyperparamters and the exploration profile. The environment has 4 observable states: cart position and velocity, pole angle and angular velocity. The agent has only 2 possible actions: pushing the cart to the left or to the right. 
+
+The problem has been addressed using a simple fully connected network for the policy network and the target network. In order to manage the balance between exploration and exploitation an exploration profile has been used, adapted for both epsilon greedy policies and softmax with temperature policies. The exploration profile is characterized by an exponential decay in the number of episodes, both the initial values and the speed of convergence can be tuned to achieve the best performance. 
+
+The training process requires a lot of parameters tuning in order to reduce the number of episodes required to solve the environment. Two possible parameters combinations have been found: an 'aggressive' combination based on a very high learning rate and a more stable, slower combination.
+Stochastic gradient descent (SGD) without momentum has been used, to deal with the extremely dynamic setting of reinforcement learning. Huber loss has been used to train the networks, since it's a trade off between L2 and L1 losses.
+
+\subsection{Results}
+The aggressive combination (lr = \num{0.12}, $\gamma=0.9$, target net update steps = 8, exploration profile convergence speed = 0.8) perfectly solves the environment (maximum score of 500 in 50 episodes) training for only 120 episodes, thanks to a very aggressive learning rate and an exploration profile focused on exploration. It's important to notice that this combination of parameters doesn't work if it's trained for more epochs as the learning becomes too unstable.
+
+The more balanced combination (lr = \num{3e-2}, $\gamma=0.95$, target net update steps = 5, exploration profile convergence speed = 6) achieves perfect score on 50 episodes after training for 500 epochs. 
+
+The exploration profile greatly influence the training of the agent: if it converges too fast or starts from a low value of temperature or $\epsilon$ the optimizer gets stuck in a local minimum and the scores don't improve. On the other hand, if there is too much exploration the network can't train on more advanced situations because a suboptimal action prevent the agent from reaching a particular state. In the case of the Cart-Pole-v1, for example, in order to keep the cart in the center, the agent needs to be able to control the pole balance very well. During testing it has also been noticed that some exploration can help also in later stages of the training, in order to learn some advanced tasks. 
+
+
+\begin{figure} [h!]
+    \centering
+    \includegraphics[width = 0.8\linewidth]{} %score/losses vs explortaiton
+    \caption{Scores and Exploration Profile}
+    \label{reg_net_out}
+\end{figure}
+
+
+\section{Cart-Pole-v1 with Pixels}
+The problem of solving Cart-Pole-v1 using only the pixels from the rendering of the environment is much more difficult than the previous one. The problem has been addressed using a deep convolutional neural network composed of a convolutional section and a linear section. The environment rendering is preprocessed before being fed to the network: the image is cropped and centered on the cart, then it's converted to grayscale and brightness levels are modified. In order to capture the movement, 2 consecutive frames are subtracted. Some small markings are drawn to give a reference point of the center of the original frame. The image is finally resized to 32x32 pixels. In order to speed up training, several tricks and change of implementations were used to increase performance and speed, such as moving the heavy lifting section of the software and the replay memory buffer on the GPU. This first naive version is extremely difficult to train and requires a lot of epochs to achieve unsatisfactory results. In order to improve on the design the network is finetuned, during training, by outputting, in addition to the action value function, also the predicted state dynamics (position, velocity, etc..) which is then evaluated against the true dynamics. 
+
+\subsection{Results}
+The first version of the design is incapable of solving the problem. The finetuned version of the design instead, achieves much better results. It reaches scores above 400 several times during training and even reaches the maximum of 500 in some episodes. When tested however results are much worse and averaged a score of 100 over 50 episodes. Looking at the videos of the tests it's possible to see that the control is very unstable, this could be due to a number of reasons: the network is not capable of correctly predicting the state dynamics (although it seems unlikely since the dynamics loss is very low), the image is compressed too much or the preprocessing is modifying the image in ways that generates instability in the network output. Due to the huge amount of resources spent to tackle this problem this issues remain unsolved. 
+
+\begin{figure} [h!]
+    \centering
+    \includegraphics[width = 0.8\linewidth]{} %score/losses vs explortaiton
+    \caption{Scores and Exploration Profile}
+    \label{reg_net_out}
+\end{figure}
+
+\section{MountainCar-v0}
+In the MountainCar-v0 environment a car is placed at the lowest point in a valley and the objective is to make it reach a flag on the top of the hill to the right before the time runs out. The observation space is 2-dimensional: only horizontal position and velocity are observable. The action space is composed of 3 actions: accelerating left or right and not accelerating. The difficulty of the problem is the fact that the car is incapable of directly reaching the top of the hill, but needs to swing back and forth in order to gain momentum. This particular fact makes this problem extremely different from the previous ones. In the Cart-Pole-v1 environment random actions were useful in the training process because there is a almost direct causality relation between the action and the reward; in this environment is practically impossible to reach the flag in time performing random actions. For this reason the key in solving this problem is a defining a good reward function. Several attempts were made to find an effective reward: checkpoints were used, linear and quadratic rewards based on the position, potential fields that gives more reward based on how far the car is from the bottom, and others. The one that turned out to be effective is slightly convoluted: the main term is related to velocity, the speed record of the car is hold in memory and every time in the episode that the car beats its previous maximum velocity it gets a fixed reward and one proportional to the difference in speed from the previous record. There is also a minor term related to the maximum position reached that behaves in the same way. 
+
+A simple fully connected network has been used paired with Huber loss, for this particular problem Adam optimizer was used, paired with a batch size of 4096. 
+
+
+\section{Results}
+
+
+\clearpage
+
+\section{Appendix}
+
+
+
+
+
+
+
+
+
+
+
+
+
+\end{document}
