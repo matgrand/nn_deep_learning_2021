@@ -20,7 +20,6 @@
 	\Large Neural Networks and Deep Learning 2021\\ 
 	
 	\Large Homework 1: Supervised Deep Learning \\
-	\small -- DRAFT VERSION --
 }
 \author{Matteo Grandin}
 \date{July 2021}
@@ -33,7 +32,7 @@
 
 \section{Introduction}
 %Explain hw goals and the main implementation strategies
-The homework is divided in two main tasks. The \textit{regression task} consists in a simple function approximation problem for which a training dataset and a test dataset are given. The \textit{classification task} consists in a image recognition problem, where the goal is to correctly classifies the image from the FashionMNIST dataset. The regression task is addressed using a simple fully connected network, while a convolutional architecture is used for the classification task.
+The homework is divided in two main tasks. The \textit{regression task} consists in a simple function approximation problem for which a training dataset and a test dataset are provided. The \textit{classification task} consists in a image recognition problem, where the goal is to correctly classifies the image from the FashionMNIST dataset. The regression task is addressed using a simple fully connected network, while a convolutional architecture is used for the classification task.
 Hyperparameters tuning is implemented using grid-search. The combinations are evaluated using cross-validation on the training datasets, analyzing validation losses and outputs. After tuning, the focus is shifted over a single combination, the nets are tested on the test datasets and performance is evaluated. Finally, networks are analyzed showing weights histogram and activation profiles, in the case of the convolutional network, the receptive fields of the convolutional filters are shown.
 
 The code is organized in notebooks, one for each tasks; the training, grid search and cross validation is coded manually in order to have more control over the software and have a deeper understanding of what the code is doing. Almost all the code testing is done on a local machine using a dedicated graphic card (NVIDIA GeForce GTX 950M). 
@@ -76,7 +75,7 @@ Each model has been trained for a total of $20\times4$ epochs ($epochs\_per\_fol
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Results and Network Analysis}
 \subsection{Regression}
-The losses and the network output for every combination can be found in the appendix. The parameter for the final training are: $Tanh$ (activation function), 16 (size of the hidden layers), 8 (batch size), Adam optimizer with \num{2e-3} as learning rate. The network achieves a test loss of \num{0.123} on the test set, from Figure \ref{reg_net_out} we can see that the test set is very well approximated except in the section where training data points are missing.
+The losses and the network output for some of the combinations can be found in the appendix. The parameters for the final training are: $Tanh$ (activation function), 16 (size of the hidden layers), 8 (batch size), Adam optimizer with \num{2e-3} as learning rate. The network achieves a test loss of \num{0.123} on the test set, from Figure \ref{reg_net_out} we can see that the test set is very well approximated except in the section where training data points are missing. This was to be expected since training and test datasets are clearly not sampled in the same way from the underline function: the training dataset has a much higher variance and lacks samples in some specific sections; the test dataset, on the other hand, is very low variance and samples are taken more uniformly. This allows to test the generalization capabilities of the model, which in this case are quiet good, it's possible to notice how different parameters' choices strongly overfit the train datapoints and can't approximate the sections without datapoints. 
 
 \begin{figure} [h]
     \centering
@@ -85,8 +84,73 @@ The losses and the network output for every combination can be found in the appe
     \label{reg_net_out}
 \end{figure}
 
-The weights histogram for the 3 network layers are shown in figure \ref{fig:reg_hist_act_prof}. Even with a small network it's hard to interpret how the weights influence the output.
+The weights histogram for the 3 network layers and the last layer activations for different inputs are shown in the Appendix. Even with a small network it's hard to interpret how the weights influence the output.
 
+\subsection{Classification}
+The final model is trained using Adam as optimizer with a learning rate of \num{3e-3}. The model trained for \num{74} epochs before early stopping. It achieves a \num{90.22} \% accuracy on the test set (\num{92.92} \% on the train set). Some examples of predictions on the test dataset are shown in Fgure \ref{fig:cnnexamples}. The confusion matrices, shown in the Appendix, are very similar for training and test datasets; from this and the small accuracy difference shows how the model overfits a little but not very much. The convolutional kernels and the convolutional layers activations are shown in the Appendix; once again it's very difficult to interpret the features encoded. The weights histogram and the linear section activations can also be found in the Appendix.
+
+\begin{figure}[h]
+     \centering
+     \begin{subfigure}[b]{0.3\textwidth}
+         \centering
+         \includegraphics[width=\textwidth]{cnn_test_example_5.png}
+     \end{subfigure}
+     \hfill
+     \begin{subfigure}[b]{0.3\textwidth}
+         \centering
+         \includegraphics[width=\textwidth]{cnn_test_example_6.png}
+     \end{subfigure}
+     \hfill
+     \begin{subfigure}[b]{0.3\textwidth}
+         \centering
+         \includegraphics[width=\textwidth]{cnn_test_example_7.png}
+     \end{subfigure}
+     \begin{subfigure}[b]{0.3\textwidth}
+         \centering
+         \includegraphics[width=\textwidth]{cnn_test_example_8.png}
+     \end{subfigure}
+     \hfill
+     \begin{subfigure}[b]{0.3\textwidth}
+         \centering
+         \includegraphics[width=\textwidth]{cnn_test_example_9.png}
+     \end{subfigure}
+     \hfill
+     \begin{subfigure}[b]{0.3\textwidth}
+         \centering
+         \includegraphics[width=\textwidth]{cnn_test_example_10.png}
+     \end{subfigure}
+     \begin{subfigure}[b]{0.3\textwidth}
+         \centering
+         \includegraphics[width=\textwidth]{cnn_test_example_11.png}
+     \end{subfigure}
+     \hfill
+     \begin{subfigure}[b]{0.3\textwidth}
+         \centering
+         \includegraphics[width=\textwidth]{cnn_test_example_12.png}
+     \end{subfigure}
+     \hfill
+     \begin{subfigure}[b]{0.3\textwidth}
+         \centering
+         \includegraphics[width=\textwidth]{cnn_test_example_13.png}
+     \end{subfigure}
+        \caption{CNN prediction capabilities tested on some examples.}
+        \label{fig:cnn_examples}
+\end{figure}
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\clearpage
+
+\section{Appendix}
+%losses
+\begin{figure} [h]
+    \centering
+    \includegraphics[width = 1\linewidth]{regression_loss_final.eps}
+    \caption{Final regression model train and test losses, early stopped. }
+    \label{reg_net_out}
+\end{figure}
+% weights histograms and last layer activations
 \begin{figure}[h]
      \centering
      \begin{subfigure}[b]{0.9\textwidth}
@@ -98,13 +162,28 @@ The weights histogram for the 3 network layers are shown in figure \ref{fig:reg_
          \centering
          \includegraphics[width=\textwidth]{final_regression_model_activations.eps}
      \end{subfigure}
-        \caption{Final regression model convolutional kernels and convolutional layer activations}
+        \caption{Final regression model weights histogram and last layer activations.}
         \label{fig:reg_hist_act_prof}
 \end{figure}
 
-\subsection{Classification}
-The final model is trained using Adam as optimizer with a learning rate of \num{3e-3}. The model trained for \num{74} epochs before early stopping. It achieves a \num{90.22} \% accuracy on the test set. The confusion matrices for both the train and test dataset are shown in the Appendix. The convolutional kernels and the convolutional layers activations are shown in figure \ref{fig:conv_activations}; once again it's very difficult to interpret the features encoded. The weights histogram and the linear section activations are in the Appendix.
+\clearpage
+%confusion matrices
+\begin{figure}[h!]
+     \centering
+     \begin{subfigure}[b]{0.7\textwidth}
+         \centering
+         \includegraphics[width=\textwidth]{cnn_confusion_matrix_train.png}
+     \end{subfigure}
+     \hfill
+     \begin{subfigure}[b]{0.7\textwidth}
+         \centering
+         \includegraphics[width=\textwidth]{cnn_confusion_matrix_test.png}
+     \end{subfigure}
+        \caption{Confusion matrices on training and test dataset. Apparently, shirts can be confused more easily with t-shirts, coats and pullover.}
+        \label{fig:confusion_matrices}
+\end{figure}
 
+% convolutional kernels and activations
 \begin{figure}[h]
      \centering
      \begin{subfigure}[b]{0.7\textwidth}
@@ -126,37 +205,208 @@ The final model is trained using Adam as optimizer with a learning rate of \num{
          \centering
          \includegraphics[width=\textwidth]{cnn_layer1_activation.png}
      \end{subfigure}
-        \caption{Final classification model weights histogram and last layer activations}
+        \caption{Final classification model convolutional kernels and activations.}
+        \label{fig:conv_activations}
+\end{figure}
+
+% cnn weights historgrams
+\begin{figure}
+    \centering
+    \includegraphics[width=\textwidth]{cnn_weights_histogram.png}
+    \caption{CNN weights histogram (all layers).}
+    \label{fig:my_label}
+\end{figure}
+
+% cnn linear layer activations
+\begin{figure}
+    \centering
+    \includegraphics[width=0.7\textwidth]{cnn_last_layer_activations.png}
+    \caption{CNN Last layer activations for different classes. It's possible to recognize some patterns}
+    \label{fig:my_label}
+\end{figure}
+
+% regression grid search
+\begin{figure}[h]
+     \centering
+     \begin{subfigure}[b]{0.8\textwidth}
+         \centering
+         \includegraphics[width=\textwidth]{regression_grid/final_regression_model_8_tanh_MSELoss_Adam_8_16_3e-3.eps}
+     \end{subfigure}
+     \hfill
+     \begin{subfigure}[b]{0.8\textwidth}
+         \centering
+         \includegraphics[width=\textwidth]{regression_grid/regression_model_8_Sigmoid_L1_Adam_8_16_0.004.eps}
+     \end{subfigure}
+     \hfill
+     \begin{subfigure}[b]{0.8\textwidth}
+         \centering
+         \includegraphics[width=\textwidth]{regression_grid/regression_model_8_Sigmoid_L1_Adam_8_16_0.01.eps}
+     \end{subfigure}
+     \hfill
+     \begin{subfigure}[b]{0.8\textwidth}
+         \centering
+         \includegraphics[width=\textwidth]{regression_grid/regression_model_8_Sigmoid_L1_Adam_8_32_0.001.eps}
+     \end{subfigure}
+     \begin{subfigure}[b]{0.8\textwidth}
+         \centering
+         \includegraphics[width=\textwidth]{regression_grid/regression_model_8_Sigmoid_L1_Adam_8_32_0.004.eps}
+     \end{subfigure}
+     \begin{subfigure}[b]{0.8\textwidth}
+         \centering
+         \includegraphics[width=\textwidth]{regression_grid/regression_model_8_Sigmoid_L1_SGDMomentum_8_16_0.0008.eps}
+     \end{subfigure}
+     
+        \caption{Regression grid search results 1/2}
+        \label{fig:conv_activations}
+\end{figure}
+
+\begin{figure}[h]
+     \centering
+     \begin{subfigure}[b]{0.8\textwidth}
+         \centering
+         \includegraphics[width=\textwidth]{regression_grid/regression_model_8_Sigmoid_L1_SGDMomentum_8_16_0.01.eps}
+     \end{subfigure}
+     \hfill
+     \begin{subfigure}[b]{0.8\textwidth}
+         \centering
+         \includegraphics[width=\textwidth]{regression_grid/regression_model_8_Sigmoid_L1_SGDMomentum_8_32_0.004.eps}
+     \end{subfigure}
+     \hfill
+     \begin{subfigure}[b]{0.8\textwidth}
+         \centering
+         \includegraphics[width=\textwidth]{regression_grid/regression_model_8_Sigmoid_MSE_Adam_8_16_0.007.eps}
+     \end{subfigure}
+     \hfill
+     \begin{subfigure}[b]{0.8\textwidth}
+         \centering
+         \includegraphics[width=\textwidth]{regression_grid/regression_model_8_Sigmoid_MSE_Adam_8_16_0.01.eps}
+     \end{subfigure}
+     \begin{subfigure}[b]{0.8\textwidth}
+         \centering
+         \includegraphics[width=\textwidth]{regression_grid/regression_model_8_Sigmoid_MSE_Adam_8_32_0.01.eps}
+     \end{subfigure}
+     \begin{subfigure}[b]{0.8\textwidth}
+         \centering
+         \includegraphics[width=\textwidth]{regression_grid/regression_model_8_Tanh_L1_SGDMomentum_8_16_0.01.eps}
+     \end{subfigure}
+     
+        \caption{Regression grid search results 2/2}
         \label{fig:conv_activations}
 \end{figure}
 
 
-\clearpage
-
-\section{Appendix}
-%confusion matrices
-\subsection{Classification}
-\subsubsection{Confusion Matrices}
-Apparently, shirts can be confused more easily with t-shirts, coats and pullover. To be fair I looked at some examples of coats and pullover and they are extremely hard to distinguish even as a human.
-\begin{figure}[h!]
+%classification combinations
+\begin{figure}[h]
      \centering
-     \begin{subfigure}[b]{0.5\textwidth}
+     \begin{subfigure}[b]{0.49\textwidth}
          \centering
-         \includegraphics[width=\textwidth]{cnn_confusion_matrix_train.png}
+         \includegraphics[width=\textwidth]{cnn_grid/CNN_1024_Adam_1e-02_val_loss.eps}
      \end{subfigure}
      \hfill
-     \begin{subfigure}[b]{0.5\textwidth}
+     \begin{subfigure}[b]{0.49\textwidth}
          \centering
-         \includegraphics[width=\textwidth]{cnn_confusion_matrix_test.png}
+         \includegraphics[width=\textwidth]{cnn_grid/CNN_1024_Adam_1e-03_val_loss.eps}
      \end{subfigure}
-        \caption{Confusion matrices on training and test dataset.}
-        \label{fig:confusion_matrices}
+     \hfill
+     \begin{subfigure}[b]{0.49\textwidth}
+         \centering
+         \includegraphics[width=\textwidth]{cnn_grid/CNN_1024_Adam_5e-02_val_loss.eps}
+     \end{subfigure}
+     \hfill
+     \begin{subfigure}[b]{0.49\textwidth}
+         \centering
+         \includegraphics[width=\textwidth]{cnn_grid/CNN_1024_Adam_5e-03_val_loss.eps}
+     \end{subfigure}
+     \hfill
+     \begin{subfigure}[b]{0.49\textwidth}
+         \centering
+         \includegraphics[width=\textwidth]{cnn_grid/CNN_1024_Adam_5e-04_val_loss.eps}
+     \end{subfigure}
+     \hfill
+     \begin{subfigure}[b]{0.49\textwidth}
+         \centering
+         \includegraphics[width=\textwidth]{cnn_grid/CNN_1024_SGD_1e-02_val_loss.eps}
+     \end{subfigure}
+     \hfill
+     \begin{subfigure}[b]{0.49\textwidth}
+         \centering
+         \includegraphics[width=\textwidth]{cnn_grid/CNN_1024_SGD_1e-03_val_loss.eps}
+     \end{subfigure}
+     \hfill
+     \begin{subfigure}[b]{0.49\textwidth}
+         \centering
+         \includegraphics[width=\textwidth]{cnn_grid/CNN_1024_SGD_5e-02_val_loss.eps}
+     \end{subfigure}
+     \hfill
+     \begin{subfigure}[b]{0.49\textwidth}
+         \centering
+         \includegraphics[width=\textwidth]{cnn_grid/CNN_1024_SGD_5e-03_val_loss.eps}
+     \end{subfigure}
+     \hfill
+     \begin{subfigure}[b]{0.49\textwidth}
+         \centering
+         \includegraphics[width=\textwidth]{cnn_grid/CNN_1024_SGD_5e-04_val_loss.eps}
+     \end{subfigure}
+     \hfill
+        \caption{Classification grid search results 1/2}
+        \label{fig:conv_activations}
 \end{figure}
 
-%cnn linear layer activations
-%classification combinations
-%regression combinations
-
+\begin{figure}[h]
+     \centering
+     \begin{subfigure}[b]{0.49\textwidth}
+         \centering
+         \includegraphics[width=\textwidth]{cnn_grid/CNN_256_Adam_1e-02_val_loss.eps}
+     \end{subfigure}
+     \hfill
+     \begin{subfigure}[b]{0.49\textwidth}
+         \centering
+         \includegraphics[width=\textwidth]{cnn_grid/CNN_256_Adam_1e-03_val_loss.eps}
+     \end{subfigure}
+     \hfill
+     \begin{subfigure}[b]{0.49\textwidth}
+         \centering
+         \includegraphics[width=\textwidth]{cnn_grid/CNN_256_Adam_5e-02_val_loss.eps}
+     \end{subfigure}
+     \hfill
+     \begin{subfigure}[b]{0.49\textwidth}
+         \centering
+         \includegraphics[width=\textwidth]{cnn_grid/CNN_256_Adam_5e-03_val_loss.eps}
+     \end{subfigure}
+     \hfill
+     \begin{subfigure}[b]{0.49\textwidth}
+         \centering
+         \includegraphics[width=\textwidth]{cnn_grid/CNN_256_Adam_5e-04_val_loss.eps}
+     \end{subfigure}
+     \hfill
+     \begin{subfigure}[b]{0.49\textwidth}
+         \centering
+         \includegraphics[width=\textwidth]{cnn_grid/CNN_256_SGD_1e-02_val_loss.eps}
+     \end{subfigure}
+     \hfill
+     \begin{subfigure}[b]{0.49\textwidth}
+         \centering
+         \includegraphics[width=\textwidth]{cnn_grid/CNN_256_SGD_1e-03_val_loss.eps}
+     \end{subfigure}
+     \hfill
+     \begin{subfigure}[b]{0.49\textwidth}
+         \centering
+         \includegraphics[width=\textwidth]{cnn_grid/CNN_256_SGD_5e-02_val_loss.eps}
+     \end{subfigure}
+     \hfill
+     \begin{subfigure}[b]{0.49\textwidth}
+         \centering
+         \includegraphics[width=\textwidth]{cnn_grid/CNN_256_SGD_5e-03_val_loss.eps}
+     \end{subfigure}
+     \hfill
+     \begin{subfigure}[b]{0.49\textwidth}
+         \centering
+         \includegraphics[width=\textwidth]{cnn_grid/CNN_256_SGD_5e-04_val_loss.eps}
+     \end{subfigure}
+     \hfill
+        \caption{Classification grid search results 2/2}
+        \label{fig:conv_activations}
+\end{figure}
 
 \end{document}
 
